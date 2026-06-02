@@ -40,6 +40,23 @@ def build_chat_model(
             temperature=temperature,
             google_api_key=os.getenv("GOOGLE_API_KEY"),
         )
+    if provider == "mimo":
+        import httpx
+        from langchain_openai import ChatOpenAI
+
+        api_key = first_env_key("MIMO_API_KEYS", "MIMO_API_KEY")
+        http_client = httpx.Client(
+            trust_env=False,
+            headers={"Accept-Encoding": "identity"},
+        )
+        return ChatOpenAI(
+            model=model_name or os.getenv("MIMO_MODEL") or os.getenv("DEFAULT_MODEL", "mimo-v2.5-pro"),
+            temperature=temperature,
+            api_key=api_key,
+            base_url=os.getenv("MIMO_BASE_URL", "https://opengateway.gitlawb.com/v1"),
+            default_headers={"Accept-Encoding": "identity"},
+            http_client=http_client,
+        )
     if provider == "ollama":
         from langchain_ollama import ChatOllama
 
@@ -48,7 +65,17 @@ def build_chat_model(
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             temperature=temperature,
         )
-    raise ValueError("This lab supports only the `google` and `ollama` providers.")
+    raise ValueError("This lab supports only the `google`, `mimo`, and `ollama` providers.")
+
+
+def first_env_key(*names: str) -> str | None:
+    for name in names:
+        raw = os.getenv(name, "")
+        for item in raw.split(","):
+            key = item.strip()
+            if key:
+                return key
+    return None
 
 
 def extract_json_object(raw: Any) -> dict[str, Any]:

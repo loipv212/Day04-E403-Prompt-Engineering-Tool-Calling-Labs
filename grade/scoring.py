@@ -249,11 +249,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Grade saved JSON output for the order-agent lab")
     parser.add_argument("--module", default="solution.agent.graph")
     parser.add_argument("--cases", default=str(ROOT_DIR / "data" / "graded_cases.json"))
-    parser.add_argument("--provider", default="google", choices=["google", "ollama"])
+    parser.add_argument("--provider", default="google", choices=["google", "mimo", "ollama"])
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--today", default="2026-06-01")
     parser.add_argument("--pass-threshold", type=float, default=80.0)
-    parser.add_argument("--judge-provider", default=None, choices=["google", "ollama"])
+    parser.add_argument("--judge-provider", default=None, choices=["google", "mimo", "ollama"])
     parser.add_argument("--judge-model-name", default=None)
     args = parser.parse_args()
 
@@ -267,7 +267,8 @@ def main() -> int:
         effective_judge_provider = args.provider
 
     scores: list[CaseScore] = []
-    for case in cases:
+    for index, case in enumerate(cases, start=1):
+        print(f"[{index}/{len(cases)}] Running case: {case['id']}", file=sys.stderr, flush=True)
         raw_result = module.run_agent(
             case["query"],
             provider=args.provider,
@@ -282,6 +283,11 @@ def main() -> int:
                 judge_provider=effective_judge_provider,
                 judge_model_name=args.judge_model_name,
             )
+        )
+        print(
+            f"[{index}/{len(cases)}] Finished case: {case['id']} -> {scores[-1].score}/{scores[-1].max_score}",
+            file=sys.stderr,
+            flush=True,
         )
 
     summary = summarize_scores(scores)
